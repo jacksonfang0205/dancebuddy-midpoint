@@ -1,250 +1,81 @@
 # DanceBuddy
 
-**An agent that makes a non-humanoid character dance along with a human dancer.** CS329Z, Fall 2026.
+An agent that makes a non-humanoid plush character dance along with a human dancer. CS329Z, Fall 2026.
 Tianrun Yan, Jackson Fang, Xi Liu.
 
-Input: a video of one person dancing. Output: a video of a plush character (no legs, no neck, soft mitten arms)
-dancing the same dance, side by side with the dancer.
+Give it a video of one person dancing; it returns a video of the plush doing the same dance, side by side. MediaPipe
+reads the dancer, an LLM agent plans how each move is shown on a body with no legs or neck, checks and revises its
+plan, and Blender renders the result.
 
-How it works: MediaPipe extracts the dancer's pose; code turns it into a *dance score* (beats, accents, phrase units,
-leg moves) and a deterministic copy of the motion onto the character's soft rig. An LLM agent (OpenRouter, tool
-calling) reads the dance and the character through tools, submits plans that scale and accent the copy, gets numeric
-checks back, inspects the arms and rendered frames with a vision model, and revises. It can also make a new character
-first with Tripo3D (text or image to 3D, segmentation, rigging). Blender renders the result.
-
-## Contents
-
-1. [Quick start (about 10 minutes, no API key)](#1-quick-start)
-2. [Setup](#2-setup)
-3. [Run the agent on a dance](#3-run-the-agent-on-a-dance)
-4. [Make a new character with the agent (Tripo3D)](#4-make-a-new-character-with-the-agent)
-5. [Reproduce the evaluation](#5-reproduce-the-evaluation)
-6. [Sample videos and characters](#6-sample-videos-and-characters)
-7. [Repository layout](#7-repository-layout)
-
-## 1. Quick start
-
-This checks that everything is installed and renders the bundled plush dancing to a built-in synthetic dancer, without
-any API key (the plan is the plain copy, no LLM):
+## 1. Install
 
 ```bash
+curl -LsSf https://astral.sh/uv/install.sh | sh     # uv (or: brew install uv)
+brew install ffmpeg                                 # or: sudo apt install ffmpeg / winget install ffmpeg
+
 git clone https://github.com/jacksonfang0205/dancebuddy-midpoint.git
 cd dancebuddy-midpoint
-uv sync --extra render
-uv run python -m dancebuddy check
-uv run python -m evaluation prepare --dance synth
-uv run python -m evaluation run --dance synth --systems plain_copy --no-llm
-uv run python -m dancebuddy render runs/synth --systems plain_copy --preview
-uv run python -m dancebuddy compose runs/synth --systems plain_copy --preview
+uv sync --extra render                              # Python 3.13, packages and Blender (bpy), ~400 MB
+cp .env.example .env                                # then put your OPENROUTER_API_KEY in .env
+uv run python -m dancebuddy check                   # should end with "all set"
 ```
 
-Open `runs/synth/side_by_side_preview.mp4`. To see the agent itself, add an OpenRouter key (Section 2) and run
-Section 3 on `runs/synth`.
+Get an OpenRouter key at https://openrouter.ai/keys. A run costs about $0.10.
 
-## 2. Setup
+## 2. Run the agent
 
-You need three tools: **uv** (manages Python and the packages), **FFmpeg** (makes the side-by-side videos) and
-**Blender** (renders the character). Python 3.13 itself does not need a separate install: uv downloads it.
-
-**1. uv**
+Download a clip from `sample_videos/` in our
+[sample folder](https://drive.google.com/drive/folders/13GeHAkxMEQeliprKsiq4-0cibBo163s2?usp=sharing) and save it as
+`videos/dance1.mp4`. Then:
 
 ```bash
-curl -LsSf https://astral.sh/uv/install.sh | sh          # macOS / Linux
+uv run python -m dancebuddy perceive videos/dance1.mp4 runs/dance1   # read the dancer
+uv run python -m dancebuddy agent runs/dance1 --no-moves             # the agent plans, checks, revises
+uv run python -m dancebuddy render runs/dance1 --engine eevee        # Blender
+uv run python -m dancebuddy compose runs/dance1                      # -> runs/dance1/side_by_side.mp4
 ```
 
-On Windows (PowerShell): `powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"`.
-On macOS you can also use `brew install uv`. Open a new terminal afterwards so `uv` is on your path.
+This uses the plush that ships with the repo (`assets/plush_soft`). Use your own video the same way, with a new run
+folder. The agent's full conversation is saved in `runs/dance1/agent/trace.json`, every attempt in `attempt_N/`, and
+cost in `summary.json`.
 
-**2. FFmpeg**
+## 3. Other characters
 
-```bash
-brew install ffmpeg            # macOS (Homebrew)
-sudo apt install ffmpeg        # Ubuntu / Debian
-winget install ffmpeg          # Windows
-```
-
-Check with `ffmpeg -version`.
-
-**3. Python packages and Blender.** The simplest way installs Blender as a Python module (`bpy`, about 400 MB)
-together with everything else, so no Blender app is needed:
+**Our segmented plush** (`plush.glb` in the sample folder), or any GLB of a plush-like character:
 
 ```bash
-uv sync --extra render         # also downloads Python 3.13 if you do not have it; results were made with bpy 5.2.3
-```
-
-If you already have the Blender app (5.x, from https://www.blender.org/download/), you can skip `bpy` and point to
-the app instead:
-
-```bash
-uv sync
-export BLENDER=/Applications/Blender.app/Contents/MacOS/Blender    # macOS; on Linux/Windows the path to blender
-```
-
-API keys go in a local `.env` (git-ignored):
-
-```bash
-cp .env.example .env
-```
-
-| Variable | Needed for | Where to get it |
-|---|---|---|
-| `OPENROUTER_API_KEY` | the agent and the LLM baseline | https://openrouter.ai/keys |
-| `TRIPO_API_KEY` | only making new characters (Section 4) | https://platform.tripo3d.ai |
-| `DANCEBUDDY_MODEL` (optional) | another model; default `openai/gpt-6-sol` | any OpenRouter model with tool calling and image input |
-
-Check the setup and run the offline tests (synthetic data and mocked APIs, no keys needed):
-
-```bash
-uv run python -m dancebuddy check
-uv run pytest
-```
-
-Every LLM request is cached in `.cache/llm/`; tokens and cost per call are logged in `.cache/llm/ledger.jsonl`, and
-each run writes its own cost to `summary.json`. A run costs about $0.10.
-
-## 3. Run the agent on a dance
-
-**Start with our samples.** Download a clip from `sample_videos/` in the
-[sample Drive folder](https://drive.google.com/drive/folders/13GeHAkxMEQeliprKsiq4-0cibBo163s2?usp=sharing), save it
-as `videos/dance1.mp4` in this repository, and run the agent with the bundled plush (`assets/plush_soft`, already
-rigged):
-
-```bash
-uv run python -m dancebuddy perceive videos/dance1.mp4 runs/dance1
-uv run python -m dancebuddy agent runs/dance1 --no-moves
-uv run python -m dancebuddy render runs/dance1 --engine eevee
-uv run python -m dancebuddy compose runs/dance1
-```
-
-The result is `runs/dance1/side_by_side.mp4`. To try the segmented plush from the Drive folder (`plush.glb`)
-instead, import and rig it once (Section 4, "a GLB you already have") and add `--char assets/plushseg_soft` to
-`agent` and `render`.
-
-**Then your own video.** Use a 10–30 s video of one person, whole body in view, filmed from the front, and a new run
-folder for each video:
-
-```bash
-uv run python -m dancebuddy perceive path/to/your_dance.mp4 runs/my_dance
-uv run python -m dancebuddy agent runs/my_dance --no-moves
-uv run python -m dancebuddy render runs/my_dance --engine eevee
-uv run python -m dancebuddy compose runs/my_dance
-```
-
-The result is `runs/my_dance/side_by_side.mp4`. For your own character, see Section 4. For a quick untextured check, add `--preview` to `render` and
-`compose`; `--engine cycles` (the default) is slower and higher quality.
-
-Useful options for `agent`:
-
-- `--char assets/<name>_soft` dances another rigged character (default `assets/plush_soft`); pass the same `--char`
-  to `render`.
-- `--name <folder>` writes the run to `runs/my_dance/<folder>` (default `agent`); pass `--systems <folder>` to
-  `render` and `compose`.
-- `--no-moves`, `--no-looks`, `--no-geometry` turn one capability off (ablations). We recommend `--no-moves` for
-  now: the agent's own moves can blend in within a few frames and look like snapping.
-- `--attempts`, `--looks` set the budgets (default 4 each).
-
-What a run writes, in `runs/my_dance/<name>/`:
-
-| File | Content |
-|---|---|
-| `trace.json` | the whole conversation: every message, tool call and tool result |
-| `attempt_N/` | each submitted plan, its motion curves and its checks |
-| `plan.json`, `curves.json`, `checks.json` | the best attempt |
-| `summary.json` | attempts, checks history, looks, final message, LLM calls and cost |
-
-`python -m dancebuddy replay runs/my_dance PLAN.json --name X` carries out a saved plan again without the LLM.
-
-## 4. Make a new character with the agent
-
-With a Tripo3D key, the same agent can make the character first and then dance with it:
-
-```bash
-uv run python -m dancebuddy agent runs/my_dance --new-character blob --image path/to/picture.png
-uv run python -m dancebuddy agent runs/my_dance --new-character blob --prompt "a plush toy with blue mitten arms"
-uv run python -m dancebuddy agent runs/my_dance --new-character blob --views front=f.png left=l.png back=b.png
-```
-
-The agent creates the model, segments it into parts (so the arms come loose from the body), imports it and builds the
-soft rig as `assets/blob_soft`, then plans the dance. Render with `--char assets/blob_soft`. The name must not contain
-`_`. Each Tripo job takes a few minutes and uses credits.
-
-You can also import a GLB you already have, without Tripo:
-
-```bash
-uv run python -m dancebuddy character model path/to/plush.glb assets/plushseg     # add --yaw 90 if it faces sideways
+uv run python -m dancebuddy character model path/to/plush.glb assets/plushseg   # add --yaw 90 if it faces sideways
 cp assets/plush_motion_spec.json assets/plushseg_motion_spec.json
 uv run python -m dancebuddy character rig assets/plushseg assets/plushseg_soft
 ```
 
-The rig finds the arms by their colour (blue) and the hair (dark brown) from the textures, so it fits plush-like
-characters; check `assets/plushseg_views/front.png` after importing.
+Then add `--char assets/plushseg_soft` to `agent` and `render`.
 
-## 5. Reproduce the evaluation
-
-Systems: `pose_copy`, `plain_copy`, `planner` (baselines), `agent`, `agent_no_looks`, `agent_no_moves`,
-`agent_numbers` (ablations). Metrics: accent recall, beat precision, motion correlation, arm follow, hands in frame,
-arm folds and sinking, rhythm measured on rendered pixels, and cost (see `evaluation/metrics/__init__.py`).
-
-1. Put the dance videos (Section 6) at the paths listed in `evaluation/data/dances.json`.
-2. Run:
+**Let the agent make one** (needs `TRIPO_API_KEY` in `.env`, from https://platform.tripo3d.ai):
 
 ```bash
-uv run python -m evaluation prepare              # perception on every dance
-uv run python -m evaluation run                  # all systems; --systems ..., --dance <id>, --no-llm, --force
-uv run python -m evaluation metrics --arms       # -> evaluation/results/results.{json,md}
+uv run python -m dancebuddy agent runs/dance1 --new-character blob --image picture.png   # or --prompt "..."
 ```
 
-LLM systems are nondeterministic, so numbers are close to, not identical with, reported ones. To re-score a set of
-saved runs without keys or videos:
+It generates the model, splits it into parts, rigs it as `assets/blob_soft`, and dances with it.
+
+## 4. Evaluation
 
 ```bash
-uv run python -m evaluation export --name mine   # saves runs (no videos) to evaluation/results/mine/
-uv run python -m evaluation metrics --runs evaluation/results/mine/runs --arms --out evaluation/results/mine/recomputed.json
+uv run pytest                                      # offline tests, no keys
+uv run python -m evaluation prepare                # perception on the dances in evaluation/data/dances.json
+uv run python -m evaluation run                    # baselines (pose_copy, plain_copy, planner) and agent ablations
+uv run python -m evaluation metrics --arms         # -> evaluation/results/results.md
 ```
 
-The fixed-rule baseline from the midway report (plain copy plus a full squash on every accent) is a plan you can
-replay without the LLM:
+Without a key, `evaluation run --no-llm` runs only the baselines. Results vary slightly between runs because the LLM
+is nondeterministic.
 
-```bash
-uv run python -c "import json; from dancebuddy.actions.plan import default_plan; s=json.load(open('runs/my_dance/dance_score.json')); p=default_plan(s); p['emphasis']=[{'frame':a,'move':'squash','size':1.0} for a in s['accents']]; json.dump(p, open('squash_rule.json','w'))"
-uv run python -m dancebuddy replay runs/my_dance squash_rule.json --name squash_rule
-```
+## Notes
 
-## 6. Sample videos and characters
-
-Dance videos and character models are not committed (size and licensing). Download them from
-**[Google Drive: DanceBuddy samples](https://drive.google.com/drive/folders/13GeHAkxMEQeliprKsiq4-0cibBo163s2?usp=sharing)**:
-
-| In the Drive folder | What it is | Where to put it |
-|---|---|---|
-| `sample_videos/` | three short single-dancer clips | `videos/` in this repository |
-| `plush.glb` | our plush, unrigged and segmented into parts (Tripo3D) | anywhere |
-
-Then, for example:
-
-```bash
-uv run python -m dancebuddy perceive videos/<clip>.mp4 runs/clip
-uv run python -m dancebuddy character model path/to/plush.glb assets/plushseg
-cp assets/plush_motion_spec.json assets/plushseg_motion_spec.json
-uv run python -m dancebuddy character rig assets/plushseg assets/plushseg_soft
-uv run python -m dancebuddy agent runs/clip --char assets/plushseg_soft --no-moves
-```
-
-## 7. Repository layout
-
-```
-dancebuddy/
-  perception/   video.py (MediaPipe pose), beats.py, signals.py     -> keypoints + dance score
-  planner/      loop.py: the agent loop (system prompt, tool calling, best attempt)
-  tools.py      the agent's tools: specs (JSON schema) + handlers, one Toolbox per run
-  actions/      plan.py (knobs, legs, emphasis), moves.py (the agent's own moves)
-  executor/     retarget.py (deterministic copy + plan -> curves), legs.py, render.py
-  critics/      numbers.py (numeric checks), inspect.py (arm geometry, vision review)
-  characters/   tripo.py (Tripo3D client), make.py (character tools), puppet.py
-  knowledge/    character rig / motion spec / card loading
-  blender/      scripts run inside Blender: make_model, rig_soft, render_curves, ...
-  llm.py        OpenRouter wrapper with cache and cost ledger
-evaluation/     baselines, data lists, metrics, results
-assets/         rigged characters, motion specs, rendered views
-tests/          offline tests
-```
+- Agent options: `--no-moves` / `--no-looks` / `--no-geometry` turn a capability off; `--name X` writes to
+  `runs/<clip>/X` (then pass `--systems X` to `render` and `compose`); `render --preview` is a fast grey preview.
+- Have the Blender app instead of `bpy`? Run `uv sync` and set `BLENDER=/path/to/blender`.
+- Code map: `perception/` (MediaPipe, beats), `planner/loop.py` (agent loop), `tools.py` (the agent's tools),
+  `executor/` (motion copy, rendering), `critics/` (checks, vision review), `characters/` (Tripo, import),
+  `blender/` (scripts run in Blender), `evaluation/`.
