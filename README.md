@@ -177,7 +177,7 @@ uv run python -m dancebuddy character rig assets/plushseg assets/plushseg_soft
 ```
 
 The rig finds the arms by their colour (blue) and the hair (dark brown) from the textures, so it fits plush-like
-characters; check `assets/blob_views/front.png` after importing.
+characters; check `assets/plushseg_views/front.png` after importing.
 
 ## 5. Reproduce the evaluation
 
