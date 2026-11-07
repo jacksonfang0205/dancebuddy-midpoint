@@ -1,6 +1,7 @@
 # DanceBuddy
 
 **An agent that makes a non-humanoid character dance along with a human dancer.** CS329Z, Fall 2026.
+Tianrun Yan, Jackson Fang, Xi Liu.
 
 Input: a video of one person dancing. Output: a video of a plush character (no legs, no neck, soft mitten arms)
 dancing the same dance, side by side with the dancer.
@@ -27,8 +28,8 @@ This checks that everything is installed and renders the bundled plush dancing t
 any API key (the plan is the plain copy, no LLM):
 
 ```bash
-git clone https://github.com/tianrunyan-tech/dancebuddy.git
-cd dancebuddy
+git clone https://github.com/jacksonfang0205/dancebuddy-midpoint.git
+cd dancebuddy-midpoint
 uv sync --extra render
 uv run python -m dancebuddy check
 uv run python -m evaluation prepare --dance synth
