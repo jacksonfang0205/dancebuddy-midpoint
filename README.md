@@ -104,16 +104,33 @@ each run writes its own cost to `summary.json`. A run costs about $0.10.
 
 ## 3. Run the agent on a dance
 
-Use a 10–30 s video of one person, whole body in view, filmed from the front. Use a new run folder for each video.
+**Start with our samples.** Download a clip from `sample_videos/` in the
+[sample Drive folder](https://drive.google.com/drive/folders/13GeHAkxMEQeliprKsiq4-0cibBo163s2?usp=sharing), save it
+as `videos/dance1.mp4` in this repository, and run the agent with the bundled plush (`assets/plush_soft`, already
+rigged):
 
 ```bash
-uv run python -m dancebuddy perceive path/to/dance.mp4 runs/my_dance
+uv run python -m dancebuddy perceive videos/dance1.mp4 runs/dance1
+uv run python -m dancebuddy agent runs/dance1 --no-moves
+uv run python -m dancebuddy render runs/dance1 --engine eevee
+uv run python -m dancebuddy compose runs/dance1
+```
+
+The result is `runs/dance1/side_by_side.mp4`. To try the segmented plush from the Drive folder (`plush.glb`)
+instead, import and rig it once (Section 4, "a GLB you already have") and add `--char assets/plushseg_soft` to
+`agent` and `render`.
+
+**Then your own video.** Use a 10–30 s video of one person, whole body in view, filmed from the front, and a new run
+folder for each video:
+
+```bash
+uv run python -m dancebuddy perceive path/to/your_dance.mp4 runs/my_dance
 uv run python -m dancebuddy agent runs/my_dance --no-moves
 uv run python -m dancebuddy render runs/my_dance --engine eevee
 uv run python -m dancebuddy compose runs/my_dance
 ```
 
-The result is `runs/my_dance/side_by_side.mp4`. For a quick untextured check, add `--preview` to `render` and
+The result is `runs/my_dance/side_by_side.mp4`. For your own character, see Section 4. For a quick untextured check, add `--preview` to `render` and
 `compose`; `--engine cycles` (the default) is slower and higher quality.
 
 Useful options for `agent`:
@@ -154,9 +171,9 @@ soft rig as `assets/blob_soft`, then plans the dance. Render with `--char assets
 You can also import a GLB you already have, without Tripo:
 
 ```bash
-uv run python -m dancebuddy character model path/to/model.glb assets/blob     # add --yaw 90 if it faces sideways
-cp assets/plush_motion_spec.json assets/blob_motion_spec.json
-uv run python -m dancebuddy character rig assets/blob assets/blob_soft
+uv run python -m dancebuddy character model path/to/plush.glb assets/plushseg     # add --yaw 90 if it faces sideways
+cp assets/plush_motion_spec.json assets/plushseg_motion_spec.json
+uv run python -m dancebuddy character rig assets/plushseg assets/plushseg_soft
 ```
 
 The rig finds the arms by their colour (blue) and the hair (dark brown) from the textures, so it fits plush-like
