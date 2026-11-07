@@ -35,6 +35,8 @@ uv run python -m dancebuddy render runs/dance1 --engine eevee        # Blender
 uv run python -m dancebuddy compose runs/dance1                      # -> runs/dance1/side_by_side.mp4
 ```
 
+Why commands and not a chat? Once started, the agent works on its own: it chooses its tools, checks and revises until it is done, so it needs no turns from you. Running it as a command keeps every run reproducible (same inputs, cached LLM calls, full trace saved) and easy to evaluate. A chat mode, where you can ask for changes like "spin the whole time", is planned.
+
 This uses the plush that ships with the repo (`assets/plush_soft`). Use your own video the same way, with a new run
 folder. The agent's full conversation is saved in `runs/dance1/agent/trace.json`, every attempt in `attempt_N/`, and
 cost in `summary.json`.
