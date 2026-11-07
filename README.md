@@ -51,16 +51,25 @@ uv run python -m dancebuddy character rig assets/plushseg assets/plushseg_soft
 
 Then add `--char assets/plushseg_soft` to `agent` and `render`.
 
-## 4. Evaluation
+## 4. Reproduce the evaluation
+
+The midpoint report compares the agent's plan with the plain copy and a one-line fixed rule (a full squash on every
+accent). After running the agent as in Section 2:
 
 ```bash
-uv run python -m evaluation prepare             # read every dance listed in evaluation/data/dances.json
-uv run python -m evaluation run                 # baselines (pose_copy, plain_copy, planner) and agent ablations
-uv run python -m evaluation metrics --arms      # -> evaluation/results/results.md
+uv run python -m evaluation.compare runs/dance1                                         # bundled plush
+uv run python -m evaluation.compare runs/dance1 --agent seg --char assets/plushseg_soft # segmented plush (Section 3)
 ```
 
-Add a clip to `evaluation/data/dances.json` (id and video path) to include it. Without a key, `run --no-llm` runs
-only the baselines. LLM results vary slightly between runs.
+For the second line, run the agent first with `--char assets/plushseg_soft --name seg`. Each prints the accent table
+and saves it to `runs/dance1/compare.md`. The agent's numbers vary a little between runs (the LLM is
+nondeterministic); the plain copy and fixed rule are exact.
+
+The full evaluation module (all baselines and ablations over the dances in `evaluation/data/dances.json`):
+
+```bash
+uv run python -m evaluation prepare && uv run python -m evaluation run && uv run python -m evaluation metrics --arms
+```
 
 ## Notes
 
