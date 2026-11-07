@@ -39,9 +39,9 @@ This uses the plush that ships with the repo (`assets/plush_soft`). Use your own
 folder. The agent's full conversation is saved in `runs/dance1/agent/trace.json`, every attempt in `attempt_N/`, and
 cost in `summary.json`.
 
-## 3. Other characters
+## 3. Your own character
 
-**Our segmented plush** (`plush.glb` in the sample folder), or any GLB of a plush-like character:
+Use our segmented plush (`plush.glb` in the sample folder) or any GLB of a plush-like character:
 
 ```bash
 uv run python -m dancebuddy character model path/to/plush.glb assets/plushseg   # add --yaw 90 if it faces sideways
@@ -51,30 +51,11 @@ uv run python -m dancebuddy character rig assets/plushseg assets/plushseg_soft
 
 Then add `--char assets/plushseg_soft` to `agent` and `render`.
 
-**Let the agent make one** (needs `TRIPO_API_KEY` in `.env`, from https://platform.tripo3d.ai):
-
-```bash
-uv run python -m dancebuddy agent runs/dance1 --new-character blob --image picture.png   # or --prompt "..."
-```
-
-It generates the model, splits it into parts, rigs it as `assets/blob_soft`, and dances with it.
-
-## 4. Evaluation
-
-```bash
-uv run pytest                                      # offline tests, no keys
-uv run python -m evaluation prepare                # perception on the dances in evaluation/data/dances.json
-uv run python -m evaluation run                    # baselines (pose_copy, plain_copy, planner) and agent ablations
-uv run python -m evaluation metrics --arms         # -> evaluation/results/results.md
-```
-
-Without a key, `evaluation run --no-llm` runs only the baselines. Results vary slightly between runs because the LLM
-is nondeterministic.
-
 ## Notes
 
 - Agent options: `--no-moves` / `--no-looks` / `--no-geometry` turn a capability off; `--name X` writes to
   `runs/<clip>/X` (then pass `--systems X` to `render` and `compose`); `render --preview` is a fast grey preview.
+- Offline tests (no keys): `uv run pytest`.
 - Have the Blender app instead of `bpy`? Run `uv sync` and set `BLENDER=/path/to/blender`.
 - Code map: `perception/` (MediaPipe, beats), `planner/loop.py` (agent loop), `tools.py` (the agent's tools),
   `executor/` (motion copy, rendering), `critics/` (checks, vision review), `characters/` (Tripo, import),
