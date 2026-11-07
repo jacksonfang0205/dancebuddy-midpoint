@@ -196,16 +196,22 @@ uv run python -m dancebuddy replay runs/my_dance squash_rule.json --name squash_
 ## 6. Sample videos and characters
 
 Dance videos and character models are not committed (size and licensing). Download them from
-**[Google Drive: DanceBuddy samples](LINK_TO_BE_ADDED)** and place them as follows:
+**[Google Drive: DanceBuddy samples](https://drive.google.com/drive/folders/13GeHAkxMEQeliprKsiq4-0cibBo163s2?usp=sharing)**:
 
-| File | Put it at | What it is |
+| In the Drive folder | What it is | Where to put it |
 |---|---|---|
-| `dance.mp4`, `dance2.mp4` | `videos/` | the two dance clips used in the midway report |
-| `plush_unrigged.glb` | anywhere | our plush model, unrigged |
-| `latest.glb` | anywhere | the plush segmented into parts with Tripo3D |
+| `sample_videos/` | three short single-dancer clips | `videos/` in this repository |
+| `plush.glb` | our plush, unrigged and segmented into parts (Tripo3D) | anywhere |
 
-Then, for example: `uv run python -m dancebuddy perceive videos/dance2.mp4 runs/dance2`, and import a GLB as in
-Section 4.
+Then, for example:
+
+```bash
+uv run python -m dancebuddy perceive videos/<clip>.mp4 runs/clip
+uv run python -m dancebuddy character model path/to/plush.glb assets/plushseg
+cp assets/plush_motion_spec.json assets/plushseg_motion_spec.json
+uv run python -m dancebuddy character rig assets/plushseg assets/plushseg_soft
+uv run python -m dancebuddy agent runs/clip --char assets/plushseg_soft --no-moves
+```
 
 ## 7. Repository layout
 
