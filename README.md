@@ -51,6 +51,17 @@ uv run python -m dancebuddy character rig assets/plushseg assets/plushseg_soft
 
 Then add `--char assets/plushseg_soft` to `agent` and `render`.
 
+## 4. Evaluation
+
+```bash
+uv run python -m evaluation prepare             # read every dance listed in evaluation/data/dances.json
+uv run python -m evaluation run                 # baselines (pose_copy, plain_copy, planner) and agent ablations
+uv run python -m evaluation metrics --arms      # -> evaluation/results/results.md
+```
+
+Add a clip to `evaluation/data/dances.json` (id and video path) to include it. Without a key, `run --no-llm` runs
+only the baselines. LLM results vary slightly between runs.
+
 ## Notes
 
 - Agent options: `--no-moves` / `--no-looks` / `--no-geometry` turn a capability off; `--name X` writes to
