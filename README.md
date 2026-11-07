@@ -43,18 +43,41 @@ Section 3 on `runs/synth`.
 
 ## 2. Setup
 
-Requirements: Python 3.13, [uv](https://docs.astral.sh/uv/), FFmpeg (`ffmpeg` on your path), and Blender 5.x either as
-the `bpy` Python module or as the Blender app.
+You need three tools: **uv** (manages Python and the packages), **FFmpeg** (makes the side-by-side videos) and
+**Blender** (renders the character). Python 3.13 itself does not need a separate install: uv downloads it.
+
+**1. uv**
 
 ```bash
-uv sync --extra render        # installs bpy (about 400 MB); results were made with bpy 5.2.3
+curl -LsSf https://astral.sh/uv/install.sh | sh          # macOS / Linux
 ```
 
-Or use an installed Blender app instead of `bpy`:
+On Windows (PowerShell): `powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"`.
+On macOS you can also use `brew install uv`. Open a new terminal afterwards so `uv` is on your path.
+
+**2. FFmpeg**
+
+```bash
+brew install ffmpeg            # macOS (Homebrew)
+sudo apt install ffmpeg        # Ubuntu / Debian
+winget install ffmpeg          # Windows
+```
+
+Check with `ffmpeg -version`.
+
+**3. Python packages and Blender.** The simplest way installs Blender as a Python module (`bpy`, about 400 MB)
+together with everything else, so no Blender app is needed:
+
+```bash
+uv sync --extra render         # also downloads Python 3.13 if you do not have it; results were made with bpy 5.2.3
+```
+
+If you already have the Blender app (5.x, from https://www.blender.org/download/), you can skip `bpy` and point to
+the app instead:
 
 ```bash
 uv sync
-export BLENDER=/Applications/Blender.app/Contents/MacOS/Blender
+export BLENDER=/Applications/Blender.app/Contents/MacOS/Blender    # macOS; on Linux/Windows the path to blender
 ```
 
 API keys go in a local `.env` (git-ignored):
